@@ -18,7 +18,7 @@ from math import inf, sqrt
 
 # Tamanho de subproblema a partir do qual a recursão para e usa força bruta.
 # Valor escolhido experimentalmente (ver relatório, seção "Limiar").
-LIMIAR_PADRAO = 12
+LIMIAR_PADRAO = 16
 
 # Quantidade máxima de sucessores (na ordem de y) comparados com cada ponto
 # da faixa. O relatório demonstra por que 7 bastam.
