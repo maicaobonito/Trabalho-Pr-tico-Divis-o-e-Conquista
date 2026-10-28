@@ -1,0 +1,5 @@
+__pycache__/
+*.pyc
+.pytest_cache/
+relatorio/relatorio.html
+relatorio/node_modules
