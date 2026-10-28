@@ -1,0 +1,335 @@
+# Casos de teste — Etapa 2: Par de Pontos Mais Próximos
+#
+# Formato de cada caso:
+#   ## <nome>
+#   motivo: <o que o caso exercita e por que ele importa>
+#   entrada:
+#   <n seguido de n linhas "x y">
+#   saida:
+#   <saída esperada de `python3 etapa2.py`: "distancia i j", i < j, base 1,
+#    distância com 6 casas decimais>
+#
+# Linhas iniciadas por um único "#" são comentários.
+#
+# Regra de desempate usada nas duas implementações: entre os pares com a
+# mesma distância mínima vence o de menor (i, j) em ordem lexicográfica.
+#
+# Todos os casos são verificados com a força bruta, com a divisão e
+# conquista em vários limiares (2, 3, 4 e o padrão) e com o programa de
+# linha de comando (ver testes/test_etapa2.py).
+
+# ---------------------------------------------------------------------------
+# Tamanhos mínimos
+# ---------------------------------------------------------------------------
+
+## dois_pontos
+motivo: menor entrada válida; só existe um par (triângulo 3-4-5)
+entrada:
+2
+0 0
+3 4
+saida:
+5.000000 1 2
+
+## tres_pontos
+motivo: n = 3 é o menor caso em que a recursão com limiar 2 divide (1 ponto de um lado, 2 do outro)
+entrada:
+3
+0 0
+10 10
+1 1
+saida:
+1.414214 1 3
+
+# ---------------------------------------------------------------------------
+# Pontos coincidentes (distância zero)
+# ---------------------------------------------------------------------------
+
+## dois_pontos_coincidentes
+motivo: distância zero; δ = 0 invalidaria o argumento dos 7 vizinhos, por isso é tratado à parte
+entrada:
+2
+7 7
+7 7
+saida:
+0.000000 1 2
+
+## coincidentes_entre_outros
+motivo: o par coincidente não é adjacente na entrada
+entrada:
+3
+1 1
+5 5
+1 1
+saida:
+0.000000 1 3
+
+## dois_grupos_coincidentes
+motivo: dois pares com distância zero; o desempate escolhe (1, 3) e não (2, 4)
+entrada:
+4
+2 2
+0 0
+2 2
+0 0
+saida:
+0.000000 1 3
+
+# ---------------------------------------------------------------------------
+# Geometrias degeneradas para a divisão na mediana de x
+# ---------------------------------------------------------------------------
+
+## todos_na_mesma_vertical
+motivo: todos os x iguais; a linha divisória não separa nada por x e a divisão precisa usar a posição na ordem
+entrada:
+5
+0 0
+0 10
+0 3
+0 7
+0 20
+saida:
+3.000000 1 3
+
+## todos_na_mesma_horizontal
+motivo: todos os y iguais; a ordem por y não discrimina e a faixa contém pontos com y empatado
+entrada:
+4
+5 0
+1 0
+9 0
+2 0
+saida:
+1.000000 2 4
+
+## colineares_na_diagonal
+motivo: pontos colineares fora dos eixos
+entrada:
+5
+0 0
+2 2
+5 5
+6 6
+10 10
+saida:
+1.414214 3 4
+
+# ---------------------------------------------------------------------------
+# Posição do par mais próximo em relação à linha divisória
+# ---------------------------------------------------------------------------
+
+## par_cruza_a_linha
+motivo: cada lado isolado tem δ ≈ 70; o par mais próximo (distância 2) só aparece na faixa
+entrada:
+6
+0 0
+0 100
+49 50
+51 50
+100 0
+100 100
+saida:
+2.000000 3 4
+
+## par_inteiro_na_esquerda
+motivo: o par mais próximo está todo na metade esquerda
+entrada:
+6
+0 0
+1 0
+20 20
+40 40
+60 0
+80 80
+saida:
+1.000000 1 2
+
+## par_inteiro_na_direita
+motivo: o par mais próximo está todo na metade direita
+entrada:
+6
+0 0
+20 40
+40 0
+60 60
+61 60
+80 0
+saida:
+1.000000 4 5
+
+## empate_esquerda_direita_faixa
+motivo: pares de distância 1 na esquerda (2,3), na direita (1,4) e cruzando (1,2); vence o menor (i, j), que está na faixa
+entrada:
+4
+2 0
+1 0
+0 0
+3 0
+saida:
+1.000000 1 2
+
+# ---------------------------------------------------------------------------
+# Muitos empates / faixa densa (pior caso do argumento dos 7 vizinhos)
+# ---------------------------------------------------------------------------
+
+## grade_3x3_embaralhada
+motivo: 12 pares empatados com distância 1; o resultado deve ser o mesmo em todas as versões
+entrada:
+9
+0 1
+2 0
+2 1
+1 1
+0 0
+2 2
+1 0
+0 2
+1 2
+saida:
+1.000000 1 4
+
+## duas_colunas_densas
+motivo: todos os pontos ficam na faixa e há vários pontos dentro de δ em y (faixa o mais cheia possível)
+entrada:
+10
+0 0
+1 2
+0 4
+1 4
+0 2
+1 0
+0 1
+1 1
+0 3
+1 3
+saida:
+1.000000 1 6
+
+# ---------------------------------------------------------------------------
+# Valores das coordenadas
+# ---------------------------------------------------------------------------
+
+## coordenadas_negativas
+motivo: coordenadas negativas e mistas
+entrada:
+5
+-5 -5
+-1 -2
+3 4
+-2 -1
+0 9
+saida:
+1.414214 2 4
+
+## coordenadas_reais
+motivo: coordenadas não inteiras
+entrada:
+4
+0.5 0.25
+1.75 2.0
+0.6 0.3
+3.1 -1.2
+saida:
+0.111803 1 3
+
+## distancia_muito_pequena
+motivo: pontos distintos muito próximos (10^-6); não podem ser tratados como coincidentes
+entrada:
+2
+0.000001 0
+0.000002 0
+saida:
+0.000001 1 2
+
+## coordenadas_grandes
+motivo: coordenadas da ordem de 2·10^9; o quadrado da distância entre os pares extremos (3,2·10^19) passa de 2^63
+entrada:
+3
+2000000000 2000000000
+1999999999 1999999999
+-2000000000 -2000000000
+saida:
+1.414214 1 2
+
+## aglomerado_e_dispersos
+motivo: quatro pontos dispersos e um aglomerado de pontos reais próximos; o par está dentro do aglomerado
+entrada:
+8
+0 0
+100 0
+0 100
+100 100
+500 500
+500.5 500.25
+501 499.5
+499.2 500.9
+saida:
+0.559017 5 6
+
+## grade_com_um_intruso_n50
+motivo: entrada maior (n = 50, várias camadas de recursão): grade 7x7 de espaçamento 10 e um ponto a distância 1 de (30, 30)
+entrada:
+50
+10 30
+40 20
+0 10
+20 10
+10 50
+40 10
+30 30
+30 10
+20 50
+40 40
+60 10
+20 20
+40 60
+0 0
+50 40
+40 50
+30 20
+10 40
+0 60
+20 60
+30 50
+60 40
+60 60
+31 30
+30 0
+40 0
+10 20
+40 30
+60 50
+20 30
+0 40
+10 60
+20 40
+10 10
+0 20
+60 0
+50 30
+30 40
+60 20
+60 30
+50 20
+50 60
+50 50
+20 0
+10 0
+50 10
+0 30
+30 60
+50 0
+0 50
+saida:
+1.000000 7 24
+
+# ---------------------------------------------------------------------------
+# Formato da entrada
+# ---------------------------------------------------------------------------
+
+## entrada_em_uma_linha
+motivo: o formato só exige n seguido das coordenadas; tudo numa linha deve ser aceito
+entrada:
+3 0 0 5 5 1 0
+saida:
+1.000000 1 3
