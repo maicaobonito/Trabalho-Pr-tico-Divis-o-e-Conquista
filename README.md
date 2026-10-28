@@ -1,6 +1,6 @@
 # Trabalho Prático: Divisão e Conquista
 
-Dupla: **[Integrante 1]** e **[Integrante 2]**
+Dupla: **Michael David** e **Leonardo Sales**
 
 Implementação, testes e análise experimental de dois problemas resolvidos por
 divisão e conquista, cada um comparado com uma solução de força bruta:
