@@ -1,0 +1,7 @@
+Data das medições: 2026-10-28 01:54 UTC
+Processador: Intel(R) Xeon(R) Processor @ 2.80GHz
+Núcleos lógicos: 4 (as medições usam um único núcleo)
+Memória: 15.7 GiB
+Sistema: Ubuntu 24.04.5 LTS (Linux-6.18.44-fc-v180-x86_64-with-glibc2.39)
+Virtualização: KVM
+Python: CPython 3.13.17

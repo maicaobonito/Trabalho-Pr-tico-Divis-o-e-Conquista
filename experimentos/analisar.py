@@ -279,18 +279,30 @@ def plotar_tempos(ax, resumo, algoritmos):
                     capsize=2, elinewidth=0.8)
 
 
+def base(pontos):
+    """Restringe uma série aos tamanhos pedidos no enunciado (100 a 6400)."""
+    return {n: t for n, t in pontos.items() if n in TAMANHOS}
+
+
 def plotar_normalizado(ax, resumo, modelos, titulo):
-    """T(n) / (c·f(n)): fica perto de 1 quando o modelo descreve os dados."""
+    """T(n) / (c·f(n)): fica perto de 1 quando o modelo descreve os dados.
+
+    A constante c é estimada com os tamanhos do enunciado (100 a 6400); os
+    tamanhos maiores mostram se o modelo continua valendo fora desse trecho.
+    """
+    maior = 1.0
     for alg, modelo in modelos.items():
         pontos = serie(resumo, alg)
-        c = constante(pontos, modelo)
+        c = constante(base(pontos), modelo)
         ns = sorted(pontos)
-        ax.plot(ns, [pontos[n] / (c * MODELOS[modelo](n)) for n in ns],
-                color=COR[alg], marker=MARCADOR[alg],
+        valores = [pontos[n] / (c * MODELOS[modelo](n)) for n in ns]
+        maior = max(maior, *valores)
+        ax.plot(ns, valores, color=COR[alg], marker=MARCADOR[alg],
                 label=f"{ROTULO[alg]} ÷ c·{modelo}")
     ax.axhline(1.0, color=TINTA_2, linewidth=1, linestyle="--")
+    ax.axvspan(TAMANHOS[0], TAMANHOS[-1], color=GRADE, alpha=0.35, linewidth=0)
     ax.set_xscale("log", base=2)
-    ax.set_ylim(0, 2)
+    ax.set_ylim(0, max(2.0, 1.1 * maior))
     ax.set_xlabel("n (escala log)")
     ax.set_ylabel("tempo ÷ modelo ajustado")
     ax.set_title(titulo, loc="left")
@@ -332,7 +344,7 @@ def figura_pequenos(resumo_peq):
 
 
 def figura_limiar(resumo_limiar, modelo):
-    figura, ax = plt.subplots(figsize=(7.2, 2.6))
+    figura, ax = plt.subplots(figsize=(7.2, 2.7))
     ns = sorted({int(n) for n, _ in resumo_limiar})
     cores = ["#2a78d6", "#eb6834"]
     marcadores = ["o", "s"]
@@ -340,8 +352,9 @@ def figura_limiar(resumo_limiar, modelo):
         pontos = {int(c): r for (m, c), r in resumo_limiar.items() if int(m) == n}
         cs = sorted(pontos)
         melhor = min(p["media"] for p in pontos.values())
-        ax.errorbar(cs, [pontos[c]["media"] / melhor for c in cs],
-                    yerr=[pontos[c]["desvio"] / melhor for c in cs],
+        # Barras: erro padrão da média (desvio / raiz do nº de execuções).
+        erro = [pontos[c]["desvio"] / math.sqrt(pontos[c]["repeticoes"]) / melhor for c in cs]
+        ax.errorbar(cs, [pontos[c]["media"] / melhor for c in cs], yerr=erro,
                     color=cor, marker=marcador, capsize=2, elinewidth=0.8,
                     label=f"medido, n = {n}")
         previsto = [modelo["K"][n] + modelo["alfa"] * contagens_recursao(n, c)[0]
@@ -349,41 +362,49 @@ def figura_limiar(resumo_limiar, modelo):
         ax.plot(cs, [p / melhor for p in previsto], color=cor, linewidth=1,
                 linestyle=":", label=f"modelo ajustado, n = {n}")
     ax.axvline(etapa2.LIMIAR_PADRAO, color=TINTA_2, linewidth=1, linestyle="--")
-    ax.annotate(f"limiar escolhido = {etapa2.LIMIAR_PADRAO}",
-                xy=(etapa2.LIMIAR_PADRAO, 1.0), xytext=(4, -14), textcoords="offset points",
-                color=TINTA, fontsize=8)
+    ax.text(etapa2.LIMIAR_PADRAO * 1.04, 1.62, f"limiar escolhido = {etapa2.LIMIAR_PADRAO}",
+            color=TINTA, fontsize=8)
     ax.set_xscale("log", base=2)
+    marcas = [2, 4, 8, 16, 32, 64, 128]
+    ax.set_xticks(marcas, [str(m) for m in marcas])
     ax.set_xlabel("limiar c (escala log): subproblemas com até c pontos usam força bruta")
     ax.set_ylabel("tempo ÷ melhor tempo")
     ax.set_title("Etapa 2: efeito do limiar no tempo da divisão e conquista", loc="left")
-    ax.legend(ncol=2, loc="upper center")
+    ax.legend(ncol=2, loc="upper left")
+    ax.set_ylim(0.9, 2.45)
     figura.tight_layout()
     salvar(figura, "limiar")
 
 
 def figura_faixa():
-    """Ilustração do argumento dos 7 vizinhos (retângulo δ × 2δ)."""
-    figura, ax = plt.subplots(figsize=(3.4, 2.1))
+    """Ilustração do argumento dos 7 vizinhos (retângulo δ × 2δ acima de p).
+
+    Os pontos de exemplo respeitam a hipótese do argumento: pontos do mesmo
+    lado estão a distância >= δ uns dos outros.
+    """
+    figura, ax = plt.subplots(figsize=(3.4, 2.2))
     d = 1.0
     for i in range(4):
         for j in range(2):
             ax.add_patch(Rectangle((-d + i * d / 2, j * d / 2), d / 2, d / 2,
                                    fill=False, edgecolor=TINTA_2, linewidth=0.8))
-    ax.axvline(0, color=COR["dc"], linewidth=2)
-    ax.plot([-0.12], [0.0], marker="o", color=COR["forca-bruta"], markersize=7)
-    ax.annotate("p", (-0.12, 0.0), xytext=(-12, 4), textcoords="offset points", color=TINTA)
-    exemplo = [(-0.9, 0.05), (-0.4, 0.45), (0.15, 0.2), (0.62, 0.08), (0.9, 0.85),
-               (-0.65, 0.92), (0.3, 0.7)]
-    ax.plot(*zip(*exemplo), linestyle="none", marker="o", color=COR["dc-linear"], markersize=5)
-    ax.annotate("", xy=(-d, -0.12), xytext=(d, -0.12),
+    ax.plot([0, 0], [-0.04, 1.1], color=COR["dc"], linewidth=2)
+    p = (-0.15, 0.0)
+    outros = [(-0.97, 0.97), (0.05, 0.6), (0.98, 0.02)]
+    for q in outros:
+        ax.plot([p[0], q[0]], [p[1], q[1]], color=TINTA_2, linewidth=0.7, linestyle="--")
+    ax.plot(*zip(*outros), linestyle="none", marker="o", color=COR["dc-linear"], markersize=5)
+    ax.plot(*p, marker="o", color=COR["forca-bruta"], markersize=7)
+    ax.annotate("p", p, xytext=(-11, 3), textcoords="offset points", color=TINTA)
+    ax.annotate("", xy=(-d, -0.16), xytext=(d, -0.16),
                 arrowprops={"arrowstyle": "<->", "color": TINTA_2, "linewidth": 0.8})
-    ax.text(0, -0.24, "2δ", ha="center", va="top", color=TINTA)
+    ax.text(0, -0.2, "2δ", ha="center", va="top", color=TINTA)
     ax.annotate("", xy=(1.1, 0), xytext=(1.1, d),
                 arrowprops={"arrowstyle": "<->", "color": TINTA_2, "linewidth": 0.8})
     ax.text(1.16, d / 2, "δ", va="center", color=TINTA)
-    ax.text(-0.98, 1.05, "esquerda", fontsize=8, color=TINTA_2)
-    ax.text(0.5, 1.05, "direita", fontsize=8, color=TINTA_2)
-    ax.text(0.03, 1.05, "linha", fontsize=8, color=COR["dc"])
+    ax.text(-0.98, 1.06, "esquerda", fontsize=8, color=TINTA_2)
+    ax.text(0.55, 1.06, "direita", fontsize=8, color=TINTA_2)
+    ax.text(0.04, 1.06, "linha", fontsize=8, color=COR["dc"])
     ax.set_xlim(-1.15, 1.35)
     ax.set_ylim(-0.42, 1.2)
     ax.set_aspect("equal")
@@ -432,20 +453,40 @@ def tabela_tempos(resumo, algoritmos, tamanhos):
 
 
 def tabela_ajustes(ajustes):
-    linhas = ["| Algoritmo | Complexidade | Inclinação log-log medida | "
-              "Inclinação esperada | Maior desvio do modelo |",
-              "|---|---|---:|---:|---:|"]
+    linhas = ["| Etapa | Algoritmo | Previsto | Inclinação esperada | Inclinação (100–6400) | "
+              "Desvio máx. (100–6400) | Inclinação (até 204 800) |",
+              "|:-:|---|---|---:|---:|---:|---:|"]
     for a in ajustes:
+        todos = f"{a['inclinacao_todos']:.2f}" if a["n_max"] > 6400 else "—"
         linhas.append(virgula(
-            f"| {a['nome']} | Θ({a['modelo']}) | {a['inclinacao']:.2f} | "
-            f"{a['esperada']} | {100 * a['erro']:.0f}% |"))
+            f"| {a['etapa']} | {a['nome']} | Θ({a['modelo']}) | {a['esperada']} | "
+            f"{a['inclinacao']:.2f} | {100 * a['erro']:.0f}% | {todos} |"))
+    return "\n".join(linhas) + "\n"
+
+
+def niveis_recursao(n, limiar):
+    """Número de níveis de nós internos (divisões) na recursão."""
+    return 0 if n <= limiar else 1 + niveis_recursao(n - n // 2, limiar)
+
+
+def tabela_localidade(resumo_loc, chamadas):
+    linhas = ["| n | Níveis de divisão | Chamadas recursivas ÷ n | "
+              "T ÷ (n log₂ n), ordem aleatória | T ÷ (n log₂ n), ordem de x |",
+              "|---:|---:|---:|---:|---:|"]
+    for n in sorted({int(m) for m, _ in resumo_loc}):
+        f = n * math.log2(n)
+        ale = resumo_loc[(str(n), "aleatoria")]["media"] / f * 1e9
+        ord_ = resumo_loc[(str(n), "ordem_x")]["media"] / f * 1e9
+        linhas.append(virgula(
+            f"| {n} | {niveis_recursao(n, etapa2.LIMIAR_PADRAO)} | {chamadas[n] / n:.3f} | "
+            f"{ale:.0f} ns | {ord_:.0f} ns |"))
     return "\n".join(linhas) + "\n"
 
 
 def tabela_limiar(resumo_limiar, escolhido, selecao):
     ns = sorted({int(n) for n, _ in resumo_limiar})
-    linhas = ["| Limiar c | " + " | ".join(f"n = {n}: média (ms)" for n in ns)
-              + " | " + " | ".join(f"n = {n}: mediana (ms)" for n in ns) + " |",
+    linhas = ["| Limiar c | " + " | ".join(f"Média, n = {n}" for n in ns)
+              + " | " + " | ".join(f"Mediana, n = {n}" for n in ns) + " |",
               "|---:|" + "---:|" * (2 * len(ns))]
     for c in selecao:
         medias = [ms(resumo_limiar[(str(n), str(c))]["media"]) for n in ns]
@@ -457,7 +498,11 @@ def tabela_limiar(resumo_limiar, escolhido, selecao):
 
 
 def estatisticas_faixa():
-    """Máximo de sucessores examinados na faixa em entradas aleatórias."""
+    """Máximo de sucessores com Δy <= δ na faixa, sem limitar a busca.
+
+    Devolve (máximo em entradas aleatórias com n = 6400, média de comparações
+    na faixa nessas entradas, máximo em grades k x k embaralhadas).
+    """
     maior, total = 0, 0
     for semente in range(5):
         rng = random.Random(semente)
@@ -466,7 +511,15 @@ def estatisticas_faixa():
         etapa2.divisao_conquista(pontos, limiar=2, vizinhos=None, estatisticas=est)
         maior = max(maior, est["max_sucessores"])
         total += est["comparacoes_faixa"]
-    return maior, total / 5
+    maior_grade = 0
+    rng = random.Random(7)
+    for k in range(2, 25):
+        grade = [(x, y) for x in range(k) for y in range(k)]
+        rng.shuffle(grade)
+        est = {}
+        etapa2.divisao_conquista(grade, limiar=2, vizinhos=None, estatisticas=est)
+        maior_grade = max(maior_grade, est["max_sucessores"])
+    return maior, total / 5, maior_grade
 
 
 # ---------------------------------------------------------------------------
@@ -503,21 +556,23 @@ def main():
     for etapa, resumo, modelos in ((1, r1, modelos1), (2, r2, modelos2)):
         for alg, modelo in modelos.items():
             pontos = serie(resumo, alg)
+            pontos_base = base(pontos)
             chave = f"etapa{etapa}_{alg}"
             ajustes.append({
-                "nome": f"Etapa {etapa}: {ROTULO[alg]}",
+                "etapa": etapa,
+                "nome": ROTULO[alg],
                 "modelo": modelo,
-                "inclinacao": inclinacao_loglog(pontos),
                 "esperada": esperadas[modelo],
-                "erro": erro_relativo_maximo(pontos, modelo),
+                "inclinacao": inclinacao_loglog(pontos_base),
+                "erro": erro_relativo_maximo(pontos_base, modelo),
+                "inclinacao_todos": inclinacao_loglog(pontos),
+                "n_max": max(pontos),
             })
-            numeros[f"{chave}_inclinacao"] = round(inclinacao_loglog(pontos), 2)
-            numeros[f"{chave}_erro_pct"] = round(100 * erro_relativo_maximo(pontos, modelo))
+            numeros[f"{chave}_inclinacao"] = round(inclinacao_loglog(pontos_base), 2)
+            numeros[f"{chave}_inclinacao_todos"] = round(inclinacao_loglog(pontos), 2)
+            numeros[f"{chave}_erro_pct"] = round(100 * erro_relativo_maximo(pontos_base, modelo))
             numeros[f"{chave}_ns"] = [min(pontos), max(pontos)]
-            # Inclinação só no intervalo pedido no enunciado (100..6400).
-            base = {n: t for n, t in pontos.items() if n in TAMANHOS}
-            numeros[f"{chave}_inclinacao_base"] = round(inclinacao_loglog(base), 2)
-            razoes = razoes_duplicacao(base)
+            razoes = razoes_duplicacao(pontos_base)
             numeros[f"{chave}_razao_media"] = round(statistics.mean(razoes.values()), 2)
             numeros[f"{chave}_t6400_ms"] = round(pontos[6400] * 1e3, 1)
     (GERADO / "tabela_ajustes.md").write_text(tabela_ajustes(ajustes), encoding="utf-8")
@@ -575,7 +630,17 @@ def main():
     melhor_c = min(relativo, key=relativo.get)
     numeros["limiar_melhor_medido"] = melhor_c
     numeros["limiar_relativo"] = {str(c): round(v, 3) for c, v in relativo.items()}
-    numeros["limiar_quase_otimos"] = [c for c, v in relativo.items() if v <= 1.05]
+    numeros["limiar_quase_otimos"] = [c for c, v in relativo.items() if v <= 1.03]
+    # Região plana: limiares contíguos ao melhor com tempo até 8% acima dele.
+    i = j = limiares.index(melhor_c)
+    while i > 0 and relativo[limiares[i - 1]] <= 1.08:
+        i -= 1
+    while j < len(limiares) - 1 and relativo[limiares[j + 1]] <= 1.08:
+        j += 1
+    numeros["limiar_regiao_plana"] = [limiares[i], limiares[j]]
+    # Erro padrão relativo típico das médias do estudo do limiar.
+    numeros["limiar_erro_padrao_pct"] = round(100 * statistics.mean(
+        r["desvio"] / r["media"] / math.sqrt(r["repeticoes"]) for r in rl.values()), 1)
     numeros["limiar_previsto"] = round(modelo["limiar_previsto"], 1)
     numeros["limiar_alfa_ns"] = round(modelo["alfa"] * 1e9, 1)
     numeros["limiar_beta_ns"] = round(modelo["beta"] * 1e9, 1)
@@ -617,10 +682,33 @@ def main():
     numeros["casos_etapa1"] = len(ler_casos("casos_etapa1.txt"))
     numeros["casos_etapa2"] = len(ler_casos("casos_etapa2.txt"))
 
+    # Localidade de memória (Etapa 2) -----------------------------------------
+    linhas_loc = ler_csv("localidade_medicoes.csv")
+    rloc = resumir(linhas_loc, ["n", "ordem"])
+    escrever_resumo("resumo_localidade.csv", ["n", "ordem"], rloc)
+    chamadas = {int(linha["n"]): int(linha["chamadas"]) for linha in linhas_loc
+                if linha["ordem"] == "aleatoria" and linha["repeticao"] == "1"}
+    (GERADO / "tabela_localidade.md").write_text(tabela_localidade(rloc, chamadas),
+                                                encoding="utf-8")
+    ns_loc = sorted(chamadas)
+    for n in (ns_loc[0], ns_loc[-1]):
+        for ordem in ("aleatoria", "ordem_x"):
+            numeros[f"loc_{ordem}_{n}_ns"] = round(
+                rloc[(str(n), ordem)]["media"] / (n * math.log2(n)) * 1e9)
+    numeros["loc_n_min"], numeros["loc_n_max"] = ns_loc[0], ns_loc[-1]
+    # Custo por n log n da D&C (Etapa 1 e 2) no começo e no fim das séries.
+    for etapa, resumo in ((1, r1), (2, r2)):
+        pontos = serie(resumo, "dc", "mediana")
+        for n in (6400, max(pontos)):
+            numeros[f"custo_nlogn_etapa{etapa}_{n}_ns"] = round(
+                pontos[n] / (n * math.log2(n)) * 1e9)
+    numeros["n_max_extra"] = max(serie(r2, "dc"))
+
     # Faixa ---------------------------------------------------------------------
     figura_faixa()
-    maior, comparacoes = estatisticas_faixa()
+    maior, comparacoes, maior_grade = estatisticas_faixa()
     numeros["faixa_max_sucessores"] = maior
+    numeros["faixa_max_sucessores_grade"] = maior_grade
     numeros["faixa_comparacoes_6400"] = round(comparacoes)
 
     (GERADO / "numeros.json").write_text(

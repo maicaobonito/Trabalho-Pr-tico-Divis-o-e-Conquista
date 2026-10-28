@@ -10,6 +10,8 @@ Gera os CSVs com as medições brutas em resultados/:
     limiar_medicoes.csv    divisão e conquista da Etapa 2 variando o limiar
     pequenos_medicoes.csv  entradas pequenas (2 a 512) para achar o ponto em
                            que a divisão e conquista passa a vencer
+    localidade_medicoes.csv  D&C da Etapa 2 com os mesmos pontos em ordem
+                           aleatória e em ordem de x (efeito da memória)
     maquina.txt            configuração da máquina
 
 Uso (a partir da raiz do repositório):
@@ -49,6 +51,7 @@ TAMANHOS_EXTRAS = [12800, 25600, 51200, 102400, 204800]
 LIMIARES = [2, 3, 4, 5, 6, 7, 8, 10, 12, 14, 16, 20, 24, 28, 32, 40, 48, 64, 96, 128]
 TAMANHOS_LIMIAR = [6400, 50000]
 TAMANHOS_PEQUENOS = [2, 3, 4, 6, 8, 12, 16, 24, 32, 48, 64, 96, 128, 192, 256, 384, 512]
+TAMANHOS_LOCALIDADE = [3200, 12800, 51200, 204800]
 
 ALGORITMOS_1 = {
     "forca-bruta": etapa1.forca_bruta,
@@ -186,6 +189,37 @@ def experimento_pequenos(repeticoes, rapido):
                  linhas)
 
 
+def experimento_localidade(repeticoes, rapido):
+    """Mesmos pontos em ordem aleatória e em ordem crescente de x.
+
+    Na versão ordenada as tuplas e os floats são recriados nessa ordem, de
+    modo que pontos vizinhos no plano também fiquem vizinhos na memória. O
+    número de operações é o mesmo; só muda a localidade dos acessos. Também
+    registra as operações contadas pela instrumentação do algoritmo.
+    """
+    print("Etapa 2 — localidade de memória", flush=True)
+    tamanhos = [1000, 4000] if rapido else TAMANHOS_LOCALIDADE
+    linhas = []
+    sorteio = random.Random(50_000)
+    for n in tamanhos:
+        for rep in range(repeticoes):
+            semente = 50_000 + 1000 * n + rep
+            entradas = {"aleatoria": pontos_aleatorios(n, semente)}
+            entradas["ordem_x"] = [(x + 0.0, y + 0.0) for x, y in sorted(entradas["aleatoria"])]
+            ordem = list(entradas)
+            sorteio.shuffle(ordem)
+            for nome in ordem:
+                t = cronometrar(etapa2.divisao_conquista, entradas[nome])
+                est = {}
+                etapa2.divisao_conquista(entradas[nome], estatisticas=est)
+                linhas.append([n, nome, rep + 1, semente, est["chamadas"],
+                               est["comparacoes_faixa"], f"{t:.9f}"])
+        print(f"  n = {n}", flush=True)
+    escrever_csv("localidade_medicoes.csv",
+                 ["n", "ordem", "repeticao", "semente", "chamadas", "comparacoes_faixa",
+                  "tempo_s"], linhas)
+
+
 def _comando(*args):
     try:
         return subprocess.run(args, capture_output=True, text=True, timeout=10).stdout
@@ -237,6 +271,7 @@ EXPERIMENTOS = {
     "etapa2": experimento_etapa2,
     "limiar": experimento_limiar,
     "pequenos": experimento_pequenos,
+    "localidade": experimento_localidade,
 }
 
 
