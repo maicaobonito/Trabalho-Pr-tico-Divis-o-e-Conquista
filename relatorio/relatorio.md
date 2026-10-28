@@ -1,7 +1,7 @@
 ---
 title: "Trabalho Prático: Divisão e Conquista"
 subtitle: "Subarranjo de soma máxima e par de pontos mais próximos"
-author: "[Integrante 1] e [Integrante 2]"
+author: "Michael David e Leonardo Sales"
 date: "28 de outubro de 2026"
 ---
 
