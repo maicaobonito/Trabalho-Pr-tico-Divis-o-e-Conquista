@@ -1,0 +1,307 @@
+# Casos de teste — Etapa 1: Subarranjo de Soma Máxima
+#
+# Formato de cada caso:
+#   ## <nome>
+#   motivo: <o que o caso exercita e por que ele importa>
+#   entrada:
+#   <texto enviado ao programa pela entrada padrão>
+#   saida:
+#   <saída esperada de `python3 etapa1.py`: "soma inicio fim", índices base 1>
+#
+# Linhas iniciadas por um único "#" são comentários.
+#
+# Regra de desempate usada em TODAS as implementações: entre os intervalos de
+# soma máxima vence o de menor início; persistindo o empate, o de menor fim.
+# O subarranjo nunca é vazio (num vetor só de negativos a resposta é o maior
+# elemento).
+#
+# Todos os casos são verificados com as quatro implementações (força bruta,
+# divisão e conquista, divisão e conquista linear e Kadane) e com o programa
+# de linha de comando (ver testes/test_etapa1.py).
+
+# ---------------------------------------------------------------------------
+# Exemplo do enunciado (variação diária de preço de uma ação)
+# ---------------------------------------------------------------------------
+
+## exemplo_corretora
+motivo: exemplo clássico de variações de preço (Cormen et al., cap. 4); a resposta conhecida é a[8..11] = 43
+entrada:
+16
+13 -3 -25 20 -3 -16 -23 18 20 -7 12 -5 -22 15 -4 7
+saida:
+43 8 11
+
+## queda_e_recuperacao
+motivo: o melhor ganho começa depois de uma sequência de quedas e termina antes de uma queda grande
+entrada:
+8
+5 -2 -2 -2 6 -1 3 -9
+saida:
+8 5 7
+
+# ---------------------------------------------------------------------------
+# Borda: vetor de tamanho 1 (caso base da recursão)
+# ---------------------------------------------------------------------------
+
+## tamanho_1_positivo
+motivo: borda exigida (n = 1); a única resposta possível é o próprio elemento
+entrada:
+1
+5
+saida:
+5 1 1
+
+## tamanho_1_negativo
+motivo: n = 1 com valor negativo; garante que o subarranjo não é tratado como vazio (soma 0)
+entrada:
+1
+-7
+saida:
+-7 1 1
+
+## tamanho_1_zero
+motivo: n = 1 com zero
+entrada:
+1
+0
+saida:
+0 1 1
+
+# ---------------------------------------------------------------------------
+# n = 2: menor vetor que é dividido (uma chamada de cada lado + cruzamento)
+# ---------------------------------------------------------------------------
+
+## tamanho_2_melhor_a_direita
+motivo: a resposta está só na metade direita
+entrada:
+2
+-1 2
+saida:
+2 2 2
+
+## tamanho_2_melhor_a_esquerda
+motivo: a resposta está só na metade esquerda
+entrada:
+2
+3 -1
+saida:
+3 1 1
+
+## tamanho_2_cruzando
+motivo: a resposta é o cruzamento das duas metades
+entrada:
+2
+1 2
+saida:
+3 1 2
+
+# ---------------------------------------------------------------------------
+# Borda: vetor contendo apenas valores negativos
+# ---------------------------------------------------------------------------
+
+## todos_negativos
+motivo: borda exigida; a resposta é o maior elemento isolado (no meio do vetor)
+entrada:
+6
+-8 -3 -6 -2 -5 -4
+saida:
+-2 4 4
+
+## todos_negativos_maior_no_inicio
+motivo: só negativos com o maior elemento na primeira posição (fronteira do vetor)
+entrada:
+4
+-1 -5 -9 -2
+saida:
+-1 1 1
+
+## todos_negativos_maior_no_fim
+motivo: só negativos com o maior elemento na última posição (fronteira do vetor)
+entrada:
+4
+-9 -5 -7 -3
+saida:
+-3 4 4
+
+## todos_negativos_com_empate
+motivo: só negativos com dois máximos iguais (-1); o desempate escolhe o de menor início
+entrada:
+5
+-3 -1 -4 -1 -5
+saida:
+-1 2 2
+
+## todos_negativos_iguais
+motivo: só negativos e todos iguais; todo intervalo de tamanho 1 empata e vence o primeiro
+entrada:
+3
+-2 -2 -2
+saida:
+-2 1 1
+
+## negativos_e_um_zero
+motivo: o máximo é 0 e não pode ser confundido com "subarranjo vazio"; o índice deve apontar o zero
+entrada:
+3
+-1 0 -2
+saida:
+0 2 2
+
+# ---------------------------------------------------------------------------
+# Borda: empates entre intervalos com a mesma soma
+# ---------------------------------------------------------------------------
+
+## empate_intervalos_disjuntos
+motivo: dois intervalos disjuntos com soma 3 (e o vetor todo com soma 1); vence o de menor início
+entrada:
+3
+3 -5 3
+saida:
+3 1 1
+
+## empate_extensao_por_zero_no_fim
+motivo: [1..1] e [1..2] somam 2 (o zero estende o intervalo); com mesmo início vence o menor fim
+entrada:
+3
+2 0 -1
+saida:
+2 1 1
+
+## empate_extensao_por_zero_no_inicio
+motivo: [1..2] e [2..2] somam 4 (o zero antecede o máximo); vence o menor início, mesmo sendo mais longo
+entrada:
+2
+0 4
+saida:
+4 1 2
+
+## empate_prefixo_de_soma_zero
+motivo: [1..3] e [3..3] somam 3 porque o prefixo 1 -1 soma zero; vence o menor início
+entrada:
+3
+1 -1 3
+saida:
+3 1 3
+
+## empate_muitos_intervalos
+motivo: seis intervalos diferentes somam 1; testa que todas as versões escolhem o mesmo (1..1)
+entrada:
+5
+1 -1 1 -1 1
+saida:
+1 1 1
+
+## empate_entre_metades
+motivo: o máximo 5 aparece uma vez em cada metade; a combinação deve preferir a esquerda
+entrada:
+6
+5 -10 0 0 -10 5
+saida:
+5 1 1
+
+## empate_esquerda_cruzando_direita
+motivo: as três candidatas da combinação (esquerda [1..1], cruzando [1..4], direita [3..4]) somam 3
+entrada:
+4
+3 -3 1 2
+saida:
+3 1 1
+
+## todos_zeros
+motivo: todos os intervalos somam 0; vence o primeiro elemento isolado
+entrada:
+4
+0 0 0 0
+saida:
+0 1 1
+
+# ---------------------------------------------------------------------------
+# Posição da resposta em relação à divisão ao meio
+# ---------------------------------------------------------------------------
+
+## melhor_cruza_o_meio
+motivo: a resposta só é encontrada pelo passo de combinação (cruza a fronteira entre as metades)
+entrada:
+6
+-5 1 4 3 1 -5
+saida:
+9 2 5
+
+## melhor_inteiro_na_esquerda
+motivo: a resposta está toda na metade esquerda
+entrada:
+6
+4 5 -20 1 1 1
+saida:
+9 1 2
+
+## melhor_inteiro_na_direita
+motivo: a resposta está toda na metade direita e o cruzamento é pior por causa do -20
+entrada:
+6
+1 1 -20 6 7 -1
+saida:
+13 4 5
+
+## vetor_inteiro
+motivo: a resposta é o vetor inteiro apesar de conter negativos
+entrada:
+5
+2 -1 2 -1 2
+saida:
+4 1 5
+
+## todos_positivos
+motivo: só positivos; a resposta é sempre o vetor inteiro
+entrada:
+4
+1 2 3 4
+saida:
+10 1 4
+
+## tamanho_impar
+motivo: n ímpar gera metades de tamanhos diferentes; resposta no último elemento
+entrada:
+7
+1 -2 3 -4 5 -6 7
+saida:
+7 7 7
+
+## classico_alternado
+motivo: sequência alternada clássica com resposta no meio
+entrada:
+9
+-2 1 -3 4 -1 2 1 -5 4
+saida:
+6 4 7
+
+## resposta_unica_n100
+motivo: vetor maior (n = 100, várias camadas de recursão) com um único pico no índice 50
+entrada:
+100
+-1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 50 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
+saida:
+50 50 50
+
+# ---------------------------------------------------------------------------
+# Valores e formato da entrada
+# ---------------------------------------------------------------------------
+
+## valores_grandes
+motivo: a soma (≈ 2·10^12) estoura inteiros de 32 bits; a implementação deve usar inteiros sem limite
+entrada:
+3
+1000000000000 -1 1000000000000
+saida:
+1999999999999 1 3
+
+## entrada_em_varias_linhas
+motivo: o formato só exige n seguido de n inteiros; quebras de linha e espaços extras devem ser aceitos
+entrada:
+5
+1
+-2
+   3
+4    -10
+saida:
+7 3 4
